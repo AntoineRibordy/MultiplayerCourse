@@ -4,7 +4,6 @@
 
 AMovingPlatform::AMovingPlatform()
 {
-	StaticMesh = CreateDefaultSubobject <UStaticMesh>(FName("Static Mesh"));
 	PrimaryActorTick.bCanEverTick = true;
 	SetMobility(EComponentMobility::Movable);
 }
@@ -12,12 +11,15 @@ AMovingPlatform::AMovingPlatform()
 void AMovingPlatform::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
 	if (HasAuthority())
 	{
 		SetReplicates(true);
 		SetReplicateMovement(true);
 	}
+
+	GlobalStartLocation = GetActorLocation();
+	GlobalTargetLocation = GetTransform().TransformPosition(TargetLocation);
 }
 
 void AMovingPlatform::Tick(float DeltaTime)
@@ -26,7 +28,22 @@ void AMovingPlatform::Tick(float DeltaTime)
 	// Move platform in x direction at speed only on the server
 	if (HasAuthority()) 
 	{
-		FVector NewLocation = GetActorLocation() + FVector(1, 0, 0) * speed * DeltaTime;
-		SetActorLocation(NewLocation);
+		
+		FVector Location = GetActorLocation();
+		FVector TargetDirection;
+		float JourneyLength = (GlobalTargetLocation - GlobalStartLocation).Size();
+		float JourneyTravelled = (Location - GlobalStartLocation).Size();
+
+		// Swap GlobalStartLocation for GlobalTargetLocation if we've moved past out target
+		if (JourneyTravelled >= JourneyLength) 
+		{
+			// Swap our start and target location as we want to change moving direction
+			FVector TempGlobalTargetLocation = GlobalTargetLocation;
+			GlobalTargetLocation = GlobalStartLocation;
+			GlobalStartLocation = TempGlobalTargetLocation;
+		}
+		TargetDirection = (GlobalTargetLocation - GlobalStartLocation).GetSafeNormal();
+		Location += TargetDirection * speed * DeltaTime;
+		SetActorLocation(Location);
 	}
 }

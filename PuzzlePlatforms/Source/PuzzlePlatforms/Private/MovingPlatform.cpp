@@ -12,13 +12,19 @@ AMovingPlatform::AMovingPlatform()
 void AMovingPlatform::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (HasAuthority())
+	{
+		SetReplicates(true);
+		SetReplicateMovement(true);
+	}
 }
 
 void AMovingPlatform::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	// Move platform in x direction at speed only on the server
-	if (HasAuthority())
+	if (HasAuthority()) 
 	{
 		FVector NewLocation = GetActorLocation() + FVector(1, 0, 0) * speed * DeltaTime;
 		SetActorLocation(NewLocation);
